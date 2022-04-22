@@ -74,13 +74,13 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -512,21 +512,22 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
             .build();
 
         // Extract all the distinct public keys from the keyrings, and deduplicate them by the keyID
-        ImmutableSet<PGPPublicKey> allKeys = allKeyRings.stream()
+        Map<Long, PGPPublicKey> allKeys = allKeyRings.stream()
             .map(PGPPublicKeyRing::getPublicKeys)
             .flatMap(keyIter -> {
                 Spliterator<PGPPublicKey> keySpliterator = Spliterators.spliteratorUnknownSize(keyIter, Spliterator.SIZED | Spliterator.IMMUTABLE);
                 return StreamSupport.stream(keySpliterator, false);
             })
-            .collect(Collectors.collectingAndThen(
-                Collectors.toCollection(() -> new TreeSet<>(Comparator.comparingLong(PGPPublicKey::getKeyID))),
-                ImmutableSet::copyOf
+            .collect(Collectors.toMap(PGPPublicKey::getKeyID, Function.identity(), (a, b) -> {
+                    System.out.println("Found duplicated key: " + a.getKeyID());
+                    return a;
+                }
             ));
 
         File keyringFile = keyrings.getBinaryKeyringsFile();
-        writeBinaryKeyringFile(keyringFile, allKeys);
+        writeBinaryKeyringFile(keyringFile, allKeys.values());
         File asciiArmoredFile = keyrings.getAsciiKeyringsFile();
-        writeAsciiArmoredKeyRingFile(asciiArmoredFile, allKeys);
+        writeAsciiArmoredKeyRingFile(asciiArmoredFile, allKeys.values());
         LOGGER.lifecycle("Exported {} keys to {} and {}", allKeyRings.size(), keyringFile, asciiArmoredFile);
     }
 
@@ -545,7 +546,7 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
                 String keyType = key.isMasterKey() ? "pub" : "sub";
                 out.write((keyType + "    " + SecuritySupport.toLongIdHexString(key.getKeyID()).toUpperCase() + "\n").getBytes(StandardCharsets.US_ASCII));
                 List<String> userIDs = PGPUtils.getUserIDs(key);
-                for(String uid : userIDs) {
+                for (String uid : userIDs) {
                     hasUid = true;
                     out.write(("uid    " + uid + "\n").getBytes(StandardCharsets.US_ASCII));
                 }
