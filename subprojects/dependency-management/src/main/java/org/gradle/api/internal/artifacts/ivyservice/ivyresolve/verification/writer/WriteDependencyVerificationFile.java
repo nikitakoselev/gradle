@@ -534,7 +534,7 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
                 return StreamSupport.stream(keySpliterator, false);
             })
             .collect(Collectors.toMap(PGPPublicKey::getKeyID, Function.identity(), (a, b) -> {
-                    System.out.println("Found duplicated key: " + a.getKeyID());
+                    LOGGER.debug("Found duplicated verification key: " + a.getKeyID());
                     return a;
                 }
             ));
