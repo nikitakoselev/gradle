@@ -51,7 +51,7 @@ class WriteDependencyVerificationFileTest extends Specification {
             getKeyID() >> keyId
         }
         PGPPublicKeyRing publicKeyRing = Mock {
-            getPublicKeys() >> List.of(publicKey).iterator()
+            getPublicKeys() >> [publicKey].iterator()
         }
 
         return publicKeyRing
