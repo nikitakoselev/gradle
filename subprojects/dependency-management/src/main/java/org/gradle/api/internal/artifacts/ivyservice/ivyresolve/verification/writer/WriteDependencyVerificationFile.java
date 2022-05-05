@@ -73,6 +73,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -539,13 +540,17 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
                 }
             ));
 
-        return allKeys.values();
+        // We sort all the key entries by their ID's.
+        return allKeys.entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByKey())
+            .map(Map.Entry::getValue)
+            .collect(Collectors.toList());
     }
 
     private void writeAsciiArmoredKeyRingFile(File ascii, Iterable<PGPPublicKey> allKeys) throws IOException {
-        if (ascii.exists()) {
-            ascii.delete();
-        }
+        Files.deleteIfExists(ascii.toPath());
+
         for (PGPPublicKey key : allKeys) {
             // First let's write some human readable info about the key being serialized
             try (OutputStream out = new FileOutputStream(ascii, true)) {
