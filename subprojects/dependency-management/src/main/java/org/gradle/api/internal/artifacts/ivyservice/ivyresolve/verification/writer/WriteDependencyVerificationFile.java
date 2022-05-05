@@ -546,13 +546,9 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
         if (ascii.exists()) {
             ascii.delete();
         }
-        boolean hasKey = false;
         for (PGPPublicKey key : allKeys) {
             // First let's write some human readable info about the keyring being serialized
             try (OutputStream out = new FileOutputStream(ascii, true)) {
-                if (hasKey) {
-                    out.write('\n');
-                }
                 boolean hasUid = false;
                 String keyType = key.isMasterKey() ? "pub" : "sub";
                 out.write((keyType + "    " + SecuritySupport.toLongIdHexString(key.getKeyID()).toUpperCase() + "\n").getBytes(StandardCharsets.US_ASCII));
@@ -570,7 +566,6 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
                  ArmoredOutputStream out = new ArmoredOutputStream(fos)) {
                 key.encode(out, true);
             }
-            hasKey = true;
         }
     }
 
