@@ -33,7 +33,7 @@ class WriteDependencyVerificationFileTest extends Specification {
         )
 
         when:
-        def publicKeys = WriteDependencyVerificationFile.gatherPublicKeys(keyRings)
+        def publicKeys = WriteDependencyVerificationFile.collectDistinctPublicKeys(keyRings)
 
         then:
         publicKeys.size() == 2

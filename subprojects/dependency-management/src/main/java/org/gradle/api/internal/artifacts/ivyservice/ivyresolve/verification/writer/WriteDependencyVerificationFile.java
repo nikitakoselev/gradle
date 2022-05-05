@@ -492,8 +492,8 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
     }
 
     private void exportKeyRingCollection(PublicKeyService publicKeyService, BuildTreeDefinedKeys keyrings, Set<String> publicKeys) throws IOException {
-        Collection<PGPPublicKeyRing> allPublicKeyRings = gatherPublicKeyRings(publicKeyService, keyrings, publicKeys, isDryRun);
-        Collection<PGPPublicKey> allPublicKeys = gatherPublicKeys(allPublicKeyRings);
+        Collection<PGPPublicKeyRing> allPublicKeyRings = collectPublicKeyRings(publicKeyService, keyrings, publicKeys, isDryRun);
+        Collection<PGPPublicKey> allPublicKeys = collectDistinctPublicKeys(allPublicKeyRings);
 
         File keyringFile = keyrings.getBinaryKeyringsFile();
         writeBinaryKeyringFile(keyringFile, allPublicKeys);
@@ -502,7 +502,7 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
         LOGGER.lifecycle("Exported {} keys to {} and {}", allPublicKeys.size(), keyringFile, asciiArmoredFile);
     }
 
-    protected static Collection<PGPPublicKeyRing> gatherPublicKeyRings(PublicKeyService publicKeyService, BuildTreeDefinedKeys keyrings, Collection<String> publicKeys, boolean isDryRun) throws IOException {
+    protected static Collection<PGPPublicKeyRing> collectPublicKeyRings(PublicKeyService publicKeyService, BuildTreeDefinedKeys keyrings, Collection<String> publicKeys, boolean isDryRun) throws IOException {
         List<PGPPublicKeyRing> existingRings = loadExistingKeyRing(keyrings, isDryRun);
         PGPPublicKeyRingListBuilder builder = new PGPPublicKeyRingListBuilder();
         for (String publicKey : publicKeys) {
@@ -525,7 +525,7 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
             .build();
     }
 
-    protected static Collection<PGPPublicKey> gatherPublicKeys(Collection<PGPPublicKeyRing> keyRings) {
+    protected static Collection<PGPPublicKey> collectDistinctPublicKeys(Collection<PGPPublicKeyRing> keyRings) {
         // Extract all the distinct public keys from the keyrings, and deduplicate them by the keyID
         Map<Long, PGPPublicKey> allKeys = keyRings.stream()
             .map(PGPPublicKeyRing::getPublicKeys)
