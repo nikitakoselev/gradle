@@ -547,7 +547,7 @@ public class WriteDependencyVerificationFile implements DependencyVerificationOv
             ascii.delete();
         }
         for (PGPPublicKey key : allKeys) {
-            // First let's write some human readable info about the keyring being serialized
+            // First let's write some human readable info about the key being serialized
             try (OutputStream out = new FileOutputStream(ascii, true)) {
                 boolean hasUid = false;
                 String keyType = key.isMasterKey() ? "pub" : "sub";
