@@ -16,12 +16,15 @@
 
 package org.gradle.integtests.resolve.verification
 
-
 import org.gradle.integtests.fixtures.UnsupportedWithConfigurationCache
 import org.gradle.security.fixtures.SigningFixtures
 import org.gradle.security.internal.Fingerprint
 import org.gradle.security.internal.SecuritySupport
 import spock.lang.Issue
+
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 
 import static org.gradle.security.fixtures.SigningFixtures.signAsciiArmored
 
@@ -409,6 +412,56 @@ class DependencyVerificationSignatureWriteIntegTest extends AbstractSignatureVer
 
         then:
         outputContains("Exported 1 keys to")
+    }
+
+    @Issue("https://github.com/gradle/gradle/issues/20140")
+    def "export deduplicated PGP keys"() {
+        given:
+        def keyring = newKeyRing()
+        def pkId = Fingerprint.of(keyring.publicKey)
+        createMetadataFile {
+            keyServer(keyServerFixture.uri)
+        }
+
+        javaLibrary()
+        uncheckedModule("org", "foo", "1.0") {
+            withSignature {
+                keyring.sign(it, [(SigningFixtures.validSecretKey): SigningFixtures.validPassword])
+            }
+        }
+        buildFile << """
+            dependencies {
+                implementation "org:foo:1.0"
+            }
+        """
+        def buildRoot = Path.of(testDirectory.path)
+        def gpgKeyringFileStream = Files.newOutputStream(buildRoot.resolve("gradle/verification-keyring.gpg"), StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+        for (int i in 1..2) {
+            SigningFixtures.validPublicKey.encode(gpgKeyringFileStream, true)
+        }
+
+        def exportedKeyRing = file("gradle/verification-keyring.gpg")
+        def exportedKeyRingAscii = file("gradle/verification-keyring.keys")
+        // Check if pre-conditions are alright
+        def keyrings = SecuritySupport.loadKeyRingFile(exportedKeyRing)
+        keyrings.size() == 2
+
+        when:
+        // Export the keys...
+        writeVerificationMetadata()
+        succeeds ":help", "--export-keys"
+        keyrings = SecuritySupport.loadKeyRingFile(exportedKeyRing)
+
+        then:
+        // Only one key should exists, as keys are deduplicated
+        keyrings.size() == 1
+        // The expected public key should be the only entry
+        keyrings.find { it.publicKey.keyID == SigningFixtures.validPublicKey.keyID }
+
+        // Check the same as above
+        def keyringsAscii = SecuritySupport.loadKeyRingFile(exportedKeyRingAscii)
+        keyringsAscii.size() == 1
+        keyringsAscii.find { it.publicKey.keyID == SigningFixtures.validPublicKey.keyID }
     }
 
 }
